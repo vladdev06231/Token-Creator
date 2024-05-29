@@ -4,6 +4,7 @@ import { Transaction, PublicKey } from '@solana/web3.js';
 import { AccountLayout, TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
 import { notify } from 'utils/notifications';
 import { Metadata, PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
+import dynamic from 'next/dynamic';
 
 const buttonStatus = {
     connected: "Transfer",
@@ -19,8 +20,9 @@ export const TransferToken = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [selectedTokenData, setSelectedTokenData] = useState<number>(null);
     const [fromTokenData, setFromTokenData] = useState<{ source: PublicKey, mint: PublicKey, amount: any } | null>(null);
-    const [tokenMetadata, setTokenMetadata] = useState(null);
-    const [logo, setLogo] = useState(null);
+    const [tokenMetadataList, setTokenMetadataList] = useState<any[]>([]);
+    const [logoList, setLogoList] = useState<string[]>([]);
+    const [tokenBalance, setTokenBalance] = useState<any[]>([]);
 
     useEffect(() => {
         const getAllTokenList = async () => {
@@ -36,16 +38,28 @@ export const TransferToken = () => {
                     }
                 );
                 setAllTokenList(tokenAccounts);
+                await fetchTokenMetadata(tokenAccounts.value);
             }
         };
         getAllTokenList();
     }, [publicKey, connection]);
 
-    // Output {mint, amount}
-    const getTokenData = (tokenAccount: { account: { data: Uint8Array; }; }) => {
-        const accountData = AccountLayout.decode(tokenAccount.account.data);
-        return accountData;
+
+    const fetchTokenMetadata = async (tokenAccounts) => {
+        const metadataList = [];
+        const logoList = [];
+        const tokenAmount = [];
+        for (let key in tokenAccounts) {
+            const [tokenMetadata, logo] = await getTokenMetadata(tokenAccounts[key]);
+            metadataList.push(tokenMetadata);
+            tokenAmount.push(getTokenData(tokenAccounts[key]).amount);
+            logoList.push(logo);
+        }
+        setTokenBalance(tokenAmount);
+        setTokenMetadataList(metadataList);
+        setLogoList(logoList);
     };
+
 
     const getTokenMetadata = useCallback(async (tokenAccount) => {
         const tokenData = getTokenData(tokenAccount);
@@ -57,14 +71,31 @@ export const TransferToken = () => {
                 tokenMint.toBuffer(),
             ],
             PROGRAM_ID,
-        )[0]
+        )[0];
         const metadataAccount = await connection.getAccountInfo(metadataPDA);
-        const [metadata, _] = await Metadata.deserialize(metadataAccount.data);
-        let logoRes = await fetch(metadata.data.uri);
-        let logoJson = await logoRes.json();
-        let { image } = logoJson;
-        return [{ tokenMetadata, ...metadata.data }, image];
-    }, [allTokenList])
+
+        if (metadataAccount) {
+            const [metadata, _] = await Metadata.deserialize(metadataAccount.data);
+            try {
+                const logoRes = await fetch(metadata.data.uri);
+                const logoJson = await logoRes.json();
+                const { image } = logoJson;
+                return [{ tokenMetadata: metadata.data, ...metadata.data }, image];
+            } catch (error) {
+                console.error('Failed to fetch token metadata', error);
+                return [metadata.data, null];
+            }
+        } else {
+            console.error('No metadata account found');
+            return [null, null];
+        }
+    }, [connection]);
+
+    // Output {mint, amount}
+    const getTokenData = (tokenAccount: { account: { data: Uint8Array; }; }) => {
+        const accountData = AccountLayout.decode(tokenAccount.account.data);
+        return accountData;
+    };
 
     const onClick = useCallback(async (form) => {
         if (!publicKey || !sendTransaction) {
@@ -141,30 +172,32 @@ export const TransferToken = () => {
 
     return (
         <div className="my-6">
-            {/* <Suspense fallback={<div>Loading...</div>}> */}
-            {allTokenList && allTokenList.value.map(async (value: any, index: number) => {
-                const tokenData = getTokenData(value);
-                const [tokenMetadata, logo] = await getTokenMetadata(value);
-                return (
-                    <div key={"tokenData" + index}>
-                        <div
-                            className="cursor-pointer"
-                            style={selectedTokenData === (index + 1) ? { color: "#9945FF" } : { color: "inherit" }}
-                            onClick={() => selectToken(value, index)}>
-                            <img src={logo} alt="token" width={25} height={25} />
-                            {/* {tokenMetadata &&
-                                <div>
-                                    <span>{tokenMetadata.name}</span>
-                                    <span>{tokenMetadata.symbol}</span>
-                                    <span>{tokenData.amount}</span>
-                                </div>
-                            } */}
+            <Suspense fallback={<div>Loading...</div>}>
+                {allTokenList && allTokenList.value.map((value: any, index: number) => {
+                    const tokenData = getTokenData(value);
+                    const tokenMetadata = tokenMetadataList[index];
+                    const logo = logoList[index];
+                    const balance = tokenBalance[index];
+                    return (
+                        <div key={"tokenData" + index}>
+                            <div
+                                className="flex cursor-pointer"
+                                style={selectedTokenData === (index + 1) ? { color: "#9945FF" } : { color: "inherit" }}
+                                onClick={() => selectToken(value, index)}>
+                                <img src={logo} alt="token" width={25} height={25} />
+                                {tokenMetadata &&
+                                    <div className="flex">
+                                        <span className="px-2">{tokenMetadata.name.replace(/\u0000/g, '')}</span>
+                                        <span className="px-2">{tokenMetadata.symbol.replace(/\u0000/g, '')}</span>
+                                        <span className="px-2">{String(balance)}</span>
+                                    </div>
+                                }
+                            </div>
+                            <br />
                         </div>
-                        <br />
-                    </div>
-                );
-            })}
-            {/* </Suspense> */}
+                    );
+                })}
+            </Suspense>
             <input
                 type="text"
                 className="form-control block mb-2 w-full px-4 py-2 text-xl font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
