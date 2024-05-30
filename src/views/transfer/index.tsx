@@ -1,8 +1,8 @@
 // Next, React
-import { FC } from 'react';
-import { TransferToken } from 'components/TransferToken';
+import { FC, FunctionComponent } from 'react';
+import TransferToken  from 'components/TransferToken';
 
-export const TrandferView: FC = ({ }) => {
+export const TransferView : FunctionComponent = ({ }) => {
 
   return (
 

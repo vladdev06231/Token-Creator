@@ -1,8 +1,9 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import { TrandferView } from "../views";
+import { TransferView } from "../views"
 
 const Transfer: NextPage = (props) => {
+
   return (
     <div>
       <Head>
@@ -12,7 +13,7 @@ const Transfer: NextPage = (props) => {
           content="Solana Scaffold"
         />
       </Head>
-      <TrandferView />
+      <TransferView />
     </div>
   );
 };

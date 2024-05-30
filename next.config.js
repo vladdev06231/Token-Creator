@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    domains: ['w7.pngwing.com'], // Include any other domains you need here
+  },
 }
 
 module.exports = {
+  images: {
+    domains: ['w7.pngwing.com'], // Include any other domains you need here
+  },
   nextConfig,
   webpack(config){
     config.resolve.fallback = { 
