@@ -2,7 +2,7 @@
 
 ## Creating a Solana Token
 
-[Demo](https://token-creator-lac.vercel.app/)
+[Demo](https://token-creator-virid.vercel.app/)
 
 You can use the token creator application to create a token and
 sent it to your wallet. This application is purely for demonstration
@@ -22,8 +22,7 @@ Creating a Solana token requires the following steps:
 Mint accounts hold information about the token such as how 
 many decimals the token has and who can mint new tokens.
 
-You can create a custom keypair for the mint account by
-[grinding a keypair](https://solanacookbook.com/references/keypairs-and-wallets.html#how-to-generate-a-vanity-address). 
+You can create a custom keypair for the mint account
 This keypair's public key will be used to have a vanity address 
 for the token. Create a new mint account with that key
 by first initializing the account and space for the mint 
@@ -94,9 +93,7 @@ const Transaction = new Transaction().add(
 ### Adding the Token Metadata
 
 When you create a token, you want to make sure that the token shows up
-in user's wallets with a name, ticker, and image. Solana uses the [Token
-Metadata Program from Metaplex](https://docs.metaplex.com/token-metadata/specification#token-standards) to achieve this.
-
+in user's wallets with a name, ticker, and image. 
 The metadata account address is derived from the mint account. The metadata
 field requires a JSON file to be populated with at least the following:
 
@@ -106,23 +103,6 @@ field requires a JSON file to be populated with at least the following:
   "symbol": "Symbol",
   "image": "Image link"
 }
-```
-
-You can find an example [here](https://token-creator-lac.vercel.app/token_metadata.json).
-
-To attach the metadata to the mint account, you can use `CreateMetadataV2`.
-
-```typescript
-const createMetadataTransaction = new CreateMetadataV2(
-  { feePayer: publicKey },
-  {
-    metadata: metadataPDA,
-    metadataData: tokenMetadata,
-    updateAuthority: publicKey,
-    mint: mintKeypair.publicKey,
-    mintAuthority: publicKey,
-  },
-)
 ```
 
 `tokenMetadata` is the JSON file you want to attach to the mint account.
@@ -135,36 +115,5 @@ Following all of the steps above, you should now have a token minted.
 
 The best part is that you can actually add all of these instructions
 to a single transaction:
-
-```typescript
-const createMintTransaction = new Transaction().add(
-  SystemProgram.createAccount({
-      fromPubkey: publicKey,
-      newAccountPubkey: mintKeypair.publicKey,
-      space: MINT_SIZE,
-      lamports: lamports,
-      programId: TOKEN_PROGRAM_ID,
-  }),
-  createInitializeMintInstruction(
-    mintKeypair.publicKey, 
-    form.decimals, 
-    publicKey, 
-    publicKey, 
-    TOKEN_PROGRAM_ID),
-  createAssociatedTokenAccountInstruction(
-    publicKey,
-    tokenATA,
-    publicKey,
-    mintKeypair.publicKey,
-  ),
-  createMintToInstruction(
-    mintKeypair.publicKey,
-    tokenATA,
-    publicKey,
-    form.amount
-  )
-);
-```
-You can find the full source code for this application [here](https://github.com/jacobcreech/Token-Creator/blob/master/src/components/CreateToken.tsx).
 
 Enjoy your new token!
